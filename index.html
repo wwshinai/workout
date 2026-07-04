@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>운동 기록</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{
+  --bg:#15181d; --card:#1e222a; --card-hi:#262b35; --line:#2f3540;
+  --ink:#f0eee8; --ink-dim:#9aa0ab; --ink-faint:#6a707b;
+  --lift:#ff6b4a; --run:#4ac2ff; --futsal:#ffd84a; --soccer:#7be86e; --achilles:#c9a0ff; --etc:#9aa0ab;
+  --ok:#7be86e;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html,body{margin:0; padding:0; background:var(--bg); color:var(--ink);
+  font-family:'Pretendard Variable',Pretendard,-apple-system,system-ui,sans-serif}
+body{padding:16px 16px 120px; max-width:520px; margin:0 auto}
+header{display:flex; align-items:baseline; justify-content:space-between; margin:4px 2px 16px}
+header h1{font-size:20px; font-weight:800; letter-spacing:-0.5px; margin:0}
+header .date-wrap{display:flex; align-items:center; gap:6px; color:var(--ink-dim); font-size:14px}
+input[type=date]{background:transparent; border:none; color:var(--ink-dim); font:inherit; padding:4px}
+.sports{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:16px}
+.sport{border:1.5px solid var(--line); border-radius:14px; background:var(--card);
+  padding:14px 6px 12px; text-align:center; cursor:pointer; user-select:none; transition:.12s}
+.sport .dot{display:block; width:8px; height:8px; border-radius:50%; margin:0 auto 8px; background:var(--c)}
+.sport .nm{font-size:14px; font-weight:700}
+.sport.on{border-color:var(--c); background:var(--card-hi); box-shadow:inset 0 0 0 1px var(--c)}
+#last{display:none; border:1px dashed var(--line); border-radius:14px; padding:12px 14px; margin-bottom:16px; color:var(--ink-dim)}
+#last .l-head{font-size:12px; letter-spacing:.06em; color:var(--ink-faint); margin-bottom:6px}
+#last .l-body{font-size:14px; line-height:1.5; white-space:pre-wrap; word-break:break-all}
+#last button{margin-top:10px; width:100%; background:transparent; border:1px solid var(--line);
+  border-radius:10px; color:var(--ink); font:inherit; font-size:13px; font-weight:600; padding:9px}
+.panel{display:none}
+.panel.on{display:block; animation:up .18s ease-out}
+@keyframes up{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
+.field{margin-bottom:14px}
+label.f{display:block; font-size:12px; font-weight:600; letter-spacing:.05em; color:var(--ink-faint); margin:0 2px 6px}
+input[type=text],input[type=number],input[type=password],textarea,select{
+  width:100%; background:var(--card); border:1px solid var(--line); border-radius:12px;
+  color:var(--ink); font:inherit; font-size:16px; padding:12px 14px; outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--ink-dim)}
+textarea{resize:none; min-height:64px}
+.row2{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.num{font-variant-numeric:tabular-nums}
+.ex-row{display:grid; grid-template-columns:1.6fr .9fr .7fr .7fr 34px; gap:6px; margin-bottom:8px; align-items:center}
+.ex-row input{padding:11px 10px; font-size:15px}
+.ex-row .del{background:transparent; border:none; color:var(--ink-faint); font-size:18px; cursor:pointer; padding:0}
+.ex-head{display:grid; grid-template-columns:1.6fr .9fr .7fr .7fr 34px; gap:6px; margin-bottom:4px}
+.ex-head span{font-size:11px; color:var(--ink-faint); padding-left:4px}
+#addEx{width:100%; background:transparent; border:1px dashed var(--line); border-radius:12px;
+  color:var(--ink-dim); font:inherit; font-size:14px; font-weight:600; padding:11px; cursor:pointer}
+.chips{display:flex; flex-wrap:wrap; gap:6px}
+.chip{border:1px solid var(--line); background:var(--card); color:var(--ink-dim);
+  border-radius:999px; padding:8px 14px; font-size:14px; font-weight:600; cursor:pointer; user-select:none}
+.chip.on{background:var(--ink); color:var(--bg); border-color:var(--ink)}
+#paceView{font-size:13px; color:var(--ink-dim); margin-top:6px; padding-left:2px; min-height:16px}
+#paceView b{color:var(--run); font-weight:700}
+#saveBar{position:fixed; left:0; right:0; bottom:0; padding:12px 16px 22px;
+  background:linear-gradient(transparent, var(--bg) 35%)}
+#saveBar .inner{max-width:520px; margin:0 auto}
+#saveBtn{width:100%; border:none; border-radius:14px; padding:16px; font:inherit;
+  font-size:16px; font-weight:800; letter-spacing:-.2px; color:#15181d; background:var(--ink); cursor:pointer}
+#saveBtn:disabled{opacity:.45}
+#toast{position:fixed; left:50%; bottom:100px; transform:translateX(-50%) translateY(20px);
+  background:var(--card-hi); border:1px solid var(--line); color:var(--ink);
+  border-radius:12px; padding:12px 18px; font-size:14px; font-weight:600;
+  opacity:0; pointer-events:none; transition:.25s; white-space:nowrap; z-index:9}
+#toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+#toast a{color:var(--ok); text-decoration:none; margin-left:6px}
+/* PIN 잠금 화면 */
+#pinOverlay{display:none; position:fixed; inset:0; background:var(--bg); z-index:20;
+  padding:0 24px; flex-direction:column; justify-content:center; align-items:center; gap:14px}
+#pinOverlay.show{display:flex}
+#pinOverlay h2{font-size:18px; font-weight:800; margin:0}
+#pinOverlay p{color:var(--ink-dim); font-size:14px; margin:0}
+#pinOverlay input{max-width:220px; text-align:center; letter-spacing:.4em; font-size:22px}
+#pinOverlay button{max-width:220px; width:100%; border:none; border-radius:12px; padding:13px;
+  font:inherit; font-size:15px; font-weight:700; color:#15181d; background:var(--ink); cursor:pointer}
+#pinMsg{color:var(--lift); font-size:13px; min-height:16px}
+</style>
+</head>
+<body>
+
+<div id="pinOverlay">
+  <h2>운동 기록</h2>
+  <p>PIN을 입력하세요 (이 기기에서 최초 1회)</p>
+  <input type="password" id="pinInput" inputmode="numeric" autocomplete="off" placeholder="••••">
+  <button id="pinSubmit" type="button">확인</button>
+  <div id="pinMsg"></div>
+</div>
+
+<header>
+  <h1>운동 기록</h1>
+  <div class="date-wrap"><input type="date" id="date"></div>
+</header>
+
+<div class="sports" id="sports">
+  <div class="sport" data-s="파워리프팅" style="--c:var(--lift)"><span class="dot"></span><span class="nm">리프팅</span></div>
+  <div class="sport" data-s="러닝" style="--c:var(--run)"><span class="dot"></span><span class="nm">러닝</span></div>
+  <div class="sport" data-s="풋살" style="--c:var(--futsal)"><span class="dot"></span><span class="nm">풋살</span></div>
+  <div class="sport" data-s="축구" style="--c:var(--soccer)"><span class="dot"></span><span class="nm">축구</span></div>
+  <div class="sport" data-s="아킬레스" style="--c:var(--achilles)"><span class="dot"></span><span class="nm">아킬레스</span></div>
+  <div class="sport" data-s="기타" style="--c:var(--etc)"><span class="dot"></span><span class="nm">기타</span></div>
+</div>
+
+<div id="last">
+  <div class="l-head">지난 기록 <span id="lastDate"></span></div>
+  <div class="l-body" id="lastBody"></div>
+  <button id="copyLast" type="button">이 구성 불러오기</button>
+</div>
+
+<div class="panel" id="p-파워리프팅">
+  <div class="ex-head"><span>운동</span><span>kg</span><span>회</span><span>세트</span><span></span></div>
+  <div id="exList"></div>
+  <button id="addEx" type="button">+ 운동 추가</button>
+</div>
+
+<div class="panel" id="p-러닝">
+  <div class="field"><label class="f">유형</label>
+    <div class="chips" id="runType">
+      <span class="chip" data-v="이지">이지</span><span class="chip" data-v="템포">템포</span>
+      <span class="chip" data-v="인터벌">인터벌</span><span class="chip" data-v="장거리">장거리</span>
+      <span class="chip" data-v="대회">대회</span>
+    </div>
+  </div>
+  <div class="row2">
+    <div class="field"><label class="f">거리 (km)</label>
+      <input type="number" id="runDist" class="num" inputmode="decimal" step="0.1" placeholder="10"></div>
+    <div class="field"><label class="f">시간 (분)</label>
+      <input type="number" id="runMin" class="num" inputmode="decimal" step="0.5" placeholder="48"></div>
+  </div>
+  <div id="paceView"></div>
+</div>
+
+<div class="panel" id="p-구기">
+  <div class="field"><label class="f">경기/활동 시간 (분)</label>
+    <input type="number" id="ballMin" class="num" inputmode="numeric" placeholder="90"></div>
+</div>
+
+<div class="panel" id="p-아킬레스">
+  <div class="row2">
+    <div class="field"><label class="f">부하 (kg)</label>
+      <input type="number" id="achLoad" class="num" inputmode="decimal" placeholder="40"></div>
+    <div class="field"><label class="f">홀드 (초)</label>
+      <input type="number" id="achHold" class="num" inputmode="numeric" placeholder="45"></div>
+  </div>
+  <div class="field"><label class="f">세트</label>
+    <input type="number" id="achSets" class="num" inputmode="numeric" placeholder="4"></div>
+</div>
+
+<div class="panel" id="p-공통">
+  <div class="field"><label class="f">RPE</label>
+    <div class="chips" id="rpe">
+      <span class="chip" data-v="6">6</span><span class="chip" data-v="7">7</span>
+      <span class="chip" data-v="8">8</span><span class="chip" data-v="9">9</span>
+      <span class="chip" data-v="10">10</span>
+    </div>
+  </div>
+  <div class="field"><label class="f">메모</label>
+    <textarea id="memo" placeholder="컨디션, 통증, 특이사항…"></textarea></div>
+</div>
+
+<div id="saveBar"><div class="inner">
+  <button id="saveBtn" type="button" disabled>종목을 선택하세요</button>
+</div></div>
+
+<div id="toast"></div>
+
+<script>
+var state = { sport:null, runType:null, rpe:null, lastRaw:null };
+var $ = function(id){ return document.getElementById(id); };
+
+// ── PIN 처리 (기기당 1회 입력, 이후 자동) ──
+var PIN_KEY = 'workout_pin';
+function getPin(){ try { return localStorage.getItem(PIN_KEY) || ''; } catch(e){ return ''; } }
+function showPin(msg){
+  $('pinMsg').textContent = msg || '';
+  $('pinOverlay').classList.add('show');
+  $('pinInput').focus();
+}
+$('pinSubmit').addEventListener('click', submitPin);
+$('pinInput').addEventListener('keydown', function(e){ if (e.key === 'Enter') submitPin(); });
+function submitPin(){
+  var v = $('pinInput').value.trim();
+  if (!v) return;
+  try { localStorage.setItem(PIN_KEY, v); } catch(e){}
+  $('pinInput').value = '';
+  $('pinOverlay').classList.remove('show');
+  if (state.sport) loadLast(); // PIN 통과 확인 겸 재시도
+}
+
+// ── API 공통 (PIN 헤더 자동 첨부, 401 시 잠금 화면) ──
+function api(path, body){
+  return fetch(path, {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'x-app-pin': getPin() },
+    body: JSON.stringify(body)
+  }).then(function(r){
+    return r.json().catch(function(){ return {}; }).then(function(j){
+      if (r.status === 401 && j.pin){
+        try { localStorage.removeItem(PIN_KEY); } catch(e){}
+        showPin(getPin() ? '' : 'PIN이 올바르지 않습니다. 다시 입력하세요.');
+        throw new Error('PIN 인증 필요');
+      }
+      if (!r.ok) throw new Error(j.error || '요청 실패');
+      return j;
+    });
+  });
+}
+
+// 오늘 날짜
+(function(){
+  var d = new Date();
+  $('date').value = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+})();
+
+// ── 종목 선택 ──
+document.querySelectorAll('.sport').forEach(function(el){
+  el.addEventListener('click', function(){
+    document.querySelectorAll('.sport').forEach(function(x){ x.classList.remove('on'); });
+    el.classList.add('on');
+    state.sport = el.dataset.s;
+    showPanels();
+    loadLast();
+    $('saveBtn').disabled = false;
+    $('saveBtn').textContent = '노션에 저장';
+  });
+});
+
+function showPanels(){
+  document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('on'); });
+  var map = {'파워리프팅':'p-파워리프팅','러닝':'p-러닝','풋살':'p-구기','축구':'p-구기','기타':'p-구기','아킬레스':'p-아킬레스'};
+  $(map[state.sport]).classList.add('on');
+  $('p-공통').classList.add('on');
+  if (state.sport==='파워리프팅' && !document.querySelector('.ex-row')) addExRow('스쿼트');
+}
+
+// ── 리프팅 행 ──
+function addExRow(name, w, r, s){
+  var div = document.createElement('div');
+  div.className = 'ex-row';
+  div.innerHTML =
+    '<input type="text" class="ex-nm" placeholder="운동명" list="lifts" value="'+(name||'')+'">'+
+    '<input type="number" class="ex-w num" inputmode="decimal" step="2.5" placeholder="kg" value="'+(w!=null?w:'')+'">'+
+    '<input type="number" class="ex-r num" inputmode="numeric" placeholder="회" value="'+(r!=null?r:'')+'">'+
+    '<input type="number" class="ex-s num" inputmode="numeric" placeholder="세트" value="'+(s!=null?s:'')+'">'+
+    '<button class="del" type="button">×</button>';
+  div.querySelector('.del').addEventListener('click', function(){ div.remove(); });
+  $('exList').appendChild(div);
+}
+$('addEx').addEventListener('click', function(){ addExRow(); });
+
+var dl = document.createElement('datalist'); dl.id = 'lifts';
+['스쿼트','벤치프레스','데드리프트','오버헤드프레스','바벨로우','풀업','런지','레그프레스'].forEach(function(n){
+  var o = document.createElement('option'); o.value = n; dl.appendChild(o);
+});
+document.body.appendChild(dl);
+
+// ── 칩 선택 ──
+function chipGroup(id, key){
+  $(id).addEventListener('click', function(e){
+    var c = e.target.closest('.chip'); if (!c) return;
+    var was = c.classList.contains('on');
+    $(id).querySelectorAll('.chip').forEach(function(x){ x.classList.remove('on'); });
+    if (!was) { c.classList.add('on'); state[key] = c.dataset.v; }
+    else state[key] = null;
+  });
+}
+chipGroup('runType','runType');
+chipGroup('rpe','rpe');
+
+// ── 페이스 계산 ──
+function calcPace(){
+  var d = parseFloat($('runDist').value), m = parseFloat($('runMin').value);
+  if (!d || !m) { $('paceView').textContent=''; return ''; }
+  var sec = Math.round(m*60/d);
+  var p = Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');
+  $('paceView').innerHTML = '페이스 <b>'+p+'/km</b>' + (sec<=255 ? ' · sub-3 페이스권!' : '');
+  return p+'/km';
+}
+$('runDist').addEventListener('input', calcPace);
+$('runMin').addEventListener('input', calcPace);
+
+// ── 지난 기록 ──
+function loadLast(){
+  $('last').style.display = 'none'; state.lastRaw = null;
+  api('/api/last', { sport: state.sport }).then(function(r){
+    if (!r || !r.found) return;
+    $('lastDate').textContent = '· ' + r.date + (r.rpe ? ' · RPE '+r.rpe : '');
+    $('lastBody').textContent = r.content || '(내용 없음)';
+    state.lastRaw = r.raw || null;
+    $('copyLast').style.display = state.lastRaw ? 'block' : 'none';
+    $('last').style.display = 'block';
+  }).catch(function(){});
+}
+
+$('copyLast').addEventListener('click', function(){
+  if (!state.lastRaw) return;
+  try {
+    var raw = JSON.parse(state.lastRaw);
+    if (raw.sport !== state.sport) return;
+    if (raw.sport === '파워리프팅' && raw.exercises){
+      $('exList').innerHTML = '';
+      raw.exercises.forEach(function(e){ addExRow(e.name, e.w, e.r, e.s); });
+    } else if (raw.sport === '러닝'){
+      $('runDist').value = raw.distanceKm || '';
+      $('runMin').value = raw.durationMin || '';
+      if (raw.runType) setChip('runType', raw.runType, 'runType');
+      calcPace();
+    } else if (raw.sport === '아킬레스'){
+      $('achLoad').value = raw.load || ''; $('achHold').value = raw.hold || ''; $('achSets').value = raw.sets || '';
+    } else {
+      $('ballMin').value = raw.durationMin || '';
+    }
+    toast('지난 구성을 불러왔습니다');
+  } catch(e){ toast('불러오기 실패'); }
+});
+
+function setChip(groupId, val, key){
+  $(groupId).querySelectorAll('.chip').forEach(function(c){
+    c.classList.toggle('on', c.dataset.v === val);
+  });
+  state[key] = val;
+}
+
+// ── 저장 ──
+$('saveBtn').addEventListener('click', function(){
+  if (!state.sport) return;
+  var data = build();
+  if (!data) return;
+  var btn = $('saveBtn');
+  btn.disabled = true; btn.textContent = '저장 중…';
+  api('/api/save', data).then(function(r){
+    btn.disabled = false; btn.textContent = '노션에 저장';
+    toast('저장 완료 ✓', r.url);
+    resetForm();
+  }).catch(function(err){
+    btn.disabled = false; btn.textContent = '노션에 저장';
+    if (err.message !== 'PIN 인증 필요') toast('오류: ' + err.message);
+  });
+});
+
+function build(){
+  var s = state.sport;
+  var d = { date: $('date').value, sport: s, rpe: state.rpe,
+            memo: $('memo').value.trim(), content:'', pace:'',
+            distanceKm: null, durationMin: null };
+  var raw = { sport: s };
+
+  if (s === '파워리프팅'){
+    var lines = [], exercises = [];
+    document.querySelectorAll('.ex-row').forEach(function(row){
+      var nm = row.querySelector('.ex-nm').value.trim();
+      var w = row.querySelector('.ex-w').value, r = row.querySelector('.ex-r').value, st = row.querySelector('.ex-s').value;
+      if (!nm) return;
+      exercises.push({ name:nm, w:w, r:r, s:st });
+      lines.push(nm + ' ' + (w||'-') + 'kg × ' + (r||'-') + ' × ' + (st||'-'));
+    });
+    if (!lines.length){ toast('운동을 입력하세요'); return null; }
+    d.content = lines.join('\n');
+    raw.exercises = exercises;
+  }
+  else if (s === '러닝'){
+    d.distanceKm = $('runDist').value || null;
+    d.durationMin = $('runMin').value || null;
+    d.pace = calcPace();
+    d.content = (state.runType||'러닝') + ' ' + (d.distanceKm||'-') + 'km ' + (d.durationMin||'-') + '분' + (d.pace ? ' ('+d.pace+')' : '');
+    raw.runType = state.runType; raw.distanceKm = d.distanceKm; raw.durationMin = d.durationMin;
+  }
+  else if (s === '아킬레스'){
+    var L=$('achLoad').value, H=$('achHold').value, S=$('achSets').value;
+    d.content = '등척성 홀드 ' + (L||'-') + 'kg × ' + (H||'-') + '초 × ' + (S||'-') + '세트';
+    raw.load=L; raw.hold=H; raw.sets=S;
+  }
+  else {
+    d.durationMin = $('ballMin').value || null;
+    d.content = s + (d.durationMin ? ' ' + d.durationMin + '분' : '');
+    raw.durationMin = d.durationMin;
+  }
+
+  d.raw = JSON.stringify(raw);
+  return d;
+}
+
+function resetForm(){
+  $('memo').value = '';
+  state.rpe = null;
+  $('rpe').querySelectorAll('.chip').forEach(function(c){ c.classList.remove('on'); });
+  loadLast();
+}
+
+function toast(msg, url){
+  var t = $('toast');
+  t.innerHTML = msg + (url ? '<a href="'+url+'" target="_blank">노션에서 보기 →</a>' : '');
+  t.classList.add('show');
+  clearTimeout(t._tm);
+  t._tm = setTimeout(function(){ t.classList.remove('show'); }, url ? 4000 : 2200);
+}
+</script>
+</body>
+</html>
